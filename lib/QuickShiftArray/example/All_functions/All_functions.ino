@@ -42,6 +42,14 @@ void setup()
   print (arr);        //-100 0 1 2 3 4 500 6 7 8
   arr.push_back(900);
   print (arr);        //0 1 2 3 4 500 6 7 8 900
+
+  for (auto it = arr.begin(); it != arr.end(); ++it){
+    *it = 10;
+  }
+
+  for(const auto &e : arr){ 
+    Serial.printf("%d ",e); //10 10 10 10 10 10 10 10 10 10
+  }
 }
 
 void loop(){ yield(); }

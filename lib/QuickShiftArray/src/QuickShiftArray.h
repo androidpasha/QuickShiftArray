@@ -35,27 +35,44 @@ QuickShiftArray<ТИП_ДАННЫХ> НАЗВАНИЕ_МАССИВА(КОЛИЧ�
 
 
 #pragma once
+#include <iterator>
 #include <initializer_list>
 #ifdef ARDUINO
 #include<Arduino.h>
 #endif
-//#define VALIDATION // проверка на обращение к ячейкам вне массива и сдвигам более длинны массива. Немного замедляет работу
+//#define VALIDATION // проверка на обращение к ячейкам вне массива и сдвигам более длинны массива. Немного замедляет работу. !!! Не работает для итераторов!
 
 
 template<typename T>
 class QuickShiftArray
 {
 public:
+	struct Iterator : public std::iterator<std::random_access_iterator_tag, T> {
+		explicit Iterator(T* ptr, size_t shift, size_t Size=0) : Size(Size), endPtr(ptr + Size), shiftPtr(ptr + shift){} //Конструктор. Порядок членов класса должен соответствовать порядку списка инициализации 
+		Iterator& operator++() {++shiftPtr; return *this;}
+		Iterator& operator--() {--shiftPtr; return *this;}
+		bool operator==(const Iterator& other) const { return shiftPtr == other.shiftPtr; }
+		bool operator!=(const Iterator& other) const { return !(*this == other); }
+		T& operator*() { return (shiftPtr < endPtr) ? *shiftPtr : *(shiftPtr - Size); }
+		private:
+		size_t Size; T* endPtr; T* shiftPtr; 
+	};
+
 	QuickShiftArray(size_t size);						//конструктор. создает на куче массив
 	QuickShiftArray(std::initializer_list<T> initList); //конструктор инициализации списком
 	QuickShiftArray(const QuickShiftArray& other);		//конструктор копирования для передачи по значению
 	T& operator [] (size_t index);						//возвращает указатель на элементу массива с номером index
 	void operator >> (size_t shift);					//сдвигает массив вправо (меняется индекс отсчета)
-	void operator << (size_t shift);;					//сдвигает массив влево
+	void operator << (size_t shift);					//сдвигает массив влево
 	void push_back(const T &newVal);					//сдвигает массив влево на одну позицию и добавляет в последнюю ячейку новые данные
 	void push_front(const T &newVal);					//сдвигает массив вправо на одну позицию и добавляет в начальную ячейку новые данные
+    void setShift(size_t shift){iterator = shift;}
+	size_t getShift(){return iterator;}
 	size_t size() const;								//возвращает количество элементов массива
+	Iterator begin() const { return Iterator(arr, iterator, _size); }
+    Iterator end() const { return Iterator(arr + _size, iterator); }
 	~QuickShiftArray();									//удаляет arr из кучи
+
 private:
 	size_t iterator = 0;								//хранить текущее начальное положение массива 
 	size_t _size = 0;									//хранит количество элементов массива
