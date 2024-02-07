@@ -9,7 +9,7 @@ template <typename T>
 void print(T arr)                   // передача в функцию по значению
 {
   for (size_t i = 0; i < arr.size(); i++)
-    Serial.printf("%d ", arr[i]);
+   Serial.printf("%d ", arr[i]);
   Serial.println();
 }
 
@@ -20,6 +20,10 @@ void setup()
   {
     QuickShiftArray<int> arr2 {1,2,3,4,5};    //инициализация списком
     print(arr2);        //1 2 3 4 5
+    arr2 >> 1;
+    print(arr2);        //1 2 3 4 5
+
+
     QuickShiftArray<int> arr3 = {1,2,3};  //инициализация списком
     print(arr3);        //1 2 3
   }
@@ -42,14 +46,14 @@ void setup()
   print (arr);        //-100 0 1 2 3 4 500 6 7 8
   arr.push_back(900);
   print (arr);        //0 1 2 3 4 500 6 7 8 900
+  
+  int i = 10;
+  for (auto it = arr.begin(); it != arr.end(); ++it)
+    *it = i++;
 
-  for (auto it = arr.begin(); it != arr.end(); ++it){
-    *it = 10;
-  }
+  for(const auto &e : arr)
+    Serial.printf("%d ",e); //10 11 12 13 14 15 16 17 18 19
 
-  for(const auto &e : arr){ 
-    Serial.printf("%d ",e); //10 10 10 10 10 10 10 10 10 10
-  }
 }
 
 void loop(){ yield(); }

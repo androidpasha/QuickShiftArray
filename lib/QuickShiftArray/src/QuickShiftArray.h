@@ -28,9 +28,6 @@ QuickShiftArray<ТИП_ДАННЫХ> НАЗВАНИЕ_МАССИВА(КОЛИЧ�
 
 Недостатки:
 Скорость доступа к элементам в 2 раза дольше чем у классического массива из-за подсчета индексов.
-С QuickShiftArray не работает цикл по диапазону for(auto e: QuickShiftArray){} т.к. в реальности
-доступ к ячейкам идет не последовательно и в крайнем индексе адрес следующей ячейки
-начинается с противоположной стороны.
 */
 
 
@@ -47,8 +44,10 @@ template<typename T>
 class QuickShiftArray
 {
 public:
+    friend struct Iterator;
 	struct Iterator : public std::iterator<std::random_access_iterator_tag, T> {
-		explicit Iterator(T* ptr, size_t shift, size_t Size=0) : Size(Size), endPtr(ptr + Size), shiftPtr(ptr + shift){} //Конструктор. Порядок членов класса должен соответствовать порядку списка инициализации 
+		explicit Iterator(T* arr, size_t shift, size_t Size=0) :
+		Size(Size), endPtr(arr + Size), shiftPtr(arr + shift){} //Конструктор. Порядок членов класса должен соответствовать порядку списка инициализации 
 		Iterator& operator++() {++shiftPtr; return *this;}
 		Iterator& operator--() {--shiftPtr; return *this;}
 		bool operator==(const Iterator& other) const { return shiftPtr == other.shiftPtr; }
@@ -61,61 +60,69 @@ public:
 	QuickShiftArray(size_t size);						//конструктор. создает на куче массив
 	QuickShiftArray(std::initializer_list<T> initList); //конструктор инициализации списком
 	QuickShiftArray(const QuickShiftArray& other);		//конструктор копирования для передачи по значению
-	T& operator [] (size_t index);						//возвращает указатель на элементу массива с номером index
+	inline T& operator [] (size_t index);						//возвращает указатель на элементу массива с номером index
 	void operator >> (size_t shift);					//сдвигает массив вправо (меняется индекс отсчета)
 	void operator << (size_t shift);					//сдвигает массив влево
 	void push_back(const T &newVal);					//сдвигает массив влево на одну позицию и добавляет в последнюю ячейку новые данные
 	void push_front(const T &newVal);					//сдвигает массив вправо на одну позицию и добавляет в начальную ячейку новые данные
-    void setShift(size_t shift){iterator = shift;}
-	size_t getShift(){return iterator;}
+    void setShift(size_t shift){ piterator = arr + shift;}
+	size_t getShift(){return piterator - pbegin;}
 	size_t size() const;								//возвращает количество элементов массива
-	Iterator begin() const { return Iterator(arr, iterator, _size); }
-    Iterator end() const { return Iterator(arr + _size, iterator); }
+//РАЗОБРАТЬСЯ! почему в итератор передается копия arr???? во всяком случае она по др. адресу. Из-за этого я не могу передать piterator вместо этого передаю  piterator-arr
+	Iterator begin() const { return Iterator(arr, piterator-arr, _size); } // 
+    Iterator end() const { return Iterator(pend, piterator-arr); }
 	~QuickShiftArray();									//удаляет arr из кучи
 
 private:
-	size_t iterator = 0;								//хранить текущее начальное положение массива 
+	//size_t iterator = 0;								//хранить текущее начальное положение массива 
 	size_t _size = 0;									//хранит количество элементов массива
 	T* arr = nullptr;									//указатель на созданный массив на куче
+	T* piterator = nullptr;								//хранить текущее начальное положение массива 
+	T* pbegin = nullptr;
+	T* pend = nullptr;
 };
 
 template<typename T>
 inline QuickShiftArray<T>::QuickShiftArray(size_t size) : _size(size) {
 	arr = new T[_size];
+	piterator = arr;
+	pbegin = arr;
+	pend = pbegin + _size;
 }
 
 template<typename T>
 inline QuickShiftArray<T>::QuickShiftArray(std::initializer_list<T> initList){
 		_size = initList.size();
 		arr = new T[_size];
+		piterator = arr;
+		pbegin = arr;
+		pend = pbegin + _size;
 		size_t i = 0;
 		for (T e : initList)
 			arr[i++] = e;
 }
 
 template<typename T>
-T& QuickShiftArray<T>::operator[](size_t index){
+QuickShiftArray<T>::QuickShiftArray(const QuickShiftArray& other)
+					:_size(other._size), piterator(other.piterator),
+					pbegin(other.pbegin)  {
+	arr = new T[_size];
+	std::copy(other.arr, other.arr + _size, arr);
+    piterator = arr + (piterator - pbegin);
+	pbegin = arr;
+	pend = pbegin + _size;
+}
+
+template<typename T>
+inline T& QuickShiftArray<T>::operator[](size_t index){
 	#ifdef VALIDATION
 	   if (index > _size) index %= _size;
     #endif
-	
-	if (index + iterator < _size)
-		return arr[index + iterator];
+
+	if (index + piterator < pend)
+		return piterator[index];
 	else
-		return arr[index + iterator - _size];
-}
-
-template<typename T>
-QuickShiftArray<T>::QuickShiftArray(const QuickShiftArray& other)
-					: iterator(other.iterator), _size(other._size) {
-	arr = new T[_size];
-	std::copy(other.arr, other.arr + _size, arr);
-}
-
-template<typename T>
-QuickShiftArray<T>::~QuickShiftArray() {
-	delete[] arr;
-	arr = nullptr;
+		return piterator[index - _size];
 }
 
  template<typename T>
@@ -123,10 +130,10 @@ QuickShiftArray<T>::~QuickShiftArray() {
 	#ifdef VALIDATION
 	  if (shift > _size) shift %= _size;
     #endif
-		
-	iterator += shift;
-	if (iterator >= _size)
-		iterator -= _size;
+
+	piterator += shift; 
+	if (piterator >= pend)
+		piterator -= _size;
 }
 
 template<typename T>
@@ -135,10 +142,9 @@ void QuickShiftArray<T>::operator >> (size_t shift){
 		if (shift > _size) shift %= _size;
     #endif
 		
-	if (iterator < shift)
-		iterator += _size - shift;
-	else
-		iterator -= shift;
+	piterator -= shift;
+	if (piterator < pend)
+		piterator += _size;
 }
 
 template<typename T>
@@ -156,4 +162,11 @@ void QuickShiftArray<T>::push_front(const T &newVal){
 template<typename T>
 size_t QuickShiftArray<T>::size() const{
 	return _size;
+}
+
+template<typename T>
+QuickShiftArray<T>::~QuickShiftArray() {
+	delete[] arr;
+//	arr = nullptr;
+//	arrIt = nullptr;
 }
