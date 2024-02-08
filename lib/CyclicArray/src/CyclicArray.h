@@ -61,50 +61,31 @@ public:
 
 	CyclicArray(size_t size);						//конструктор. создает на куче массив
 	CyclicArray(std::initializer_list<T> initList); //конструктор инициализации списком
-	CyclicArray(const CyclicArray& other);		//конструктор копирования для передачи по значению
-	T& operator [] (size_t index);						//возвращает указатель на элементу массива с номером index
-	void operator >> (size_t shift);					//сдвигает массив вправо (меняется индекс отсчета)
-	void operator << (size_t shift);					//сдвигает массив влево
-	T& operator ++ (int){
-		if (circleIdx == _size)
-			circleIdx = 0;
-		return (*this)[circleIdx++];
-	}
-
-		T& operator ++ (){
-		if (++circleIdx == _size)
-			circleIdx = 0;
-		return (*this)[circleIdx];
-	}
-
-	T& operator -- (int){ //Постфиксный декремент
-		if (circleIdx == 0)
-			circleIdx = _size;
-		return (*this)[circleIdx--];
-	}
-		T& operator -- (){//префиксный декремент
-		if (circleIdx == 0)
-			circleIdx = _size;
-		return (*this)[--circleIdx];
-	}
-	size_t getCircleIdx(){return circleIdx;}
-	T& setCircleIdx(size_t idx){circleIdx = idx; return (*this)[circleIdx];}
-
-	void push_back(const T &newVal);					//сдвигает массив влево на одну позицию и добавляет в последнюю ячейку новые данные
-	void push_front(const T &newVal);					//сдвигает массив вправо на одну позицию и добавляет в начальную ячейку новые данные
-    void setShift(size_t shift){ arrPtr = beginPtr + shift;} //Сдвигает массив влево начиная с нулевого элемента без учета прежних сдвигов
-	size_t getShift(){return arrPtr - beginPtr;}             //Возвращает сдвиг
-	size_t size() const{return _size;};					//возвращает количество элементов массива
-	Iterator begin() const { return Iterator(beginPtr, arrPtr, endPtr); } //Необходим для работы цикла по диапазону 
+	CyclicArray(const CyclicArray& other);			//конструктор копирования для передачи по значению
+	T& operator [] (size_t index);					//возвращает указатель на элементу массива с номером index
+	void operator >> (size_t shift);				//сдвигает массив вправо (меняется индекс отсчета)
+	void operator << (size_t shift);				//сдвигает массив влево
+	T& operator ++ (int);							//постфиксный инкремент
+	T& operator ++ ();								//префиксный инкремент
+	T& operator -- (int); 							//постфиксный декремент
+	T& operator -- ();								//префиксный декремент
+	size_t getCircleIdx(){return circleIdx;} 		//возвращает положение кругового индекса для чтения/записи операторами ++ и --
+	T& setCircleIdx(size_t idx){circleIdx = idx; return (*this)[circleIdx];}//устанавливает круговой индекс для чтения/записи операторами ++ и -- а также возвращает значение установленной позиции
+	void push_back(const T &newVal);				//сдвигает массив влево на одну позицию и добавляет в последнюю ячейку новые данные
+	void push_front(const T &newVal);				//сдвигает массив вправо на одну позицию и добавляет в начальную ячейку новые данные
+    void setShift(size_t shift){arrPtr = beginPtr + shift;} //Сдвигает массив влево начиная с нулевого элемента без учета прежних сдвигов
+	size_t getShift(){return arrPtr - beginPtr;}            //Возвращает сдвиг
+	size_t size() const{return _size;};						//возвращает количество элементов массива
+	Iterator begin() const { return Iterator(beginPtr, arrPtr, endPtr); } //Возвращает iterator. Необходим для работы цикла по диапазону 
     Iterator end() const { return Iterator(beginPtr, endPtr, endPtr); }
 	~CyclicArray(){ delete[] beginPtr; };									
 
 private:
-	size_t _size = 0;									//хранит количество элементов массива
-	T* beginPtr = nullptr;								//указатель на начало созданного массив на куче
-	T* arrPtr = nullptr;								//указатель начального положение массива с учетом сдвига массива
-	T* endPtr = nullptr;								//указатель на конец массива
-	size_t circleIdx = 0;
+	size_t _size = 0;			//хранит количество элементов массива
+	T* beginPtr = nullptr;		//указатель на начало созданного массив на куче
+	T* arrPtr = nullptr;		//указатель начального положение массива с учетом сдвига массива
+	T* endPtr = nullptr;		//указатель на конец массива
+	size_t circleIdx = 0;		//индекс для обращения к массиву через операторы ++ и --
 };
 
 template<typename T>
@@ -164,6 +145,34 @@ void CyclicArray<T>::operator >> (size_t shift){
 	arrPtr -= shift;
 	if (arrPtr < endPtr)
 		arrPtr += _size;
+}
+
+template<typename T>
+inline T& CyclicArray<T>::operator ++ (int){
+	if (circleIdx == _size)
+		circleIdx = 0;
+	return (*this)[circleIdx++];
+}
+
+template<typename T>
+inline T& CyclicArray<T>::operator ++ (){
+	if (++circleIdx == _size)
+		circleIdx = 0;
+	return (*this)[circleIdx];
+}
+
+template<typename T>
+inline T& CyclicArray<T>::operator -- (int){ //Постфиксный декремент
+	if (circleIdx == 0)
+		circleIdx = _size;
+	return (*this)[circleIdx--];
+}
+
+template<typename T>
+inline T& CyclicArray<T>::operator -- (){//префиксный декремент
+	if (circleIdx == 0)
+		circleIdx = _size;
+	return (*this)[--circleIdx];
 }
 
 template<typename T>

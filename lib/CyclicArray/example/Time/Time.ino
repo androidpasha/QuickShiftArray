@@ -14,7 +14,7 @@
     size_t c;
 
 template<typename T>
-uint32_t shiftArr(T __first, T __middle, T __last){
+inline uint32_t shiftArr(T __first, T __middle, T __last){
   c = ITERATIONS;
   startTime = millis();
   while (c--)
@@ -24,7 +24,7 @@ uint32_t shiftArr(T __first, T __middle, T __last){
 }
 
 template<typename T>
-uint32_t push_back(T __first, T __middle, T __last){
+inline uint32_t push_back(T __first, T __middle, T __last){
   c = ITERATIONS;
   startTime = millis();
   while (c--){
@@ -87,7 +87,7 @@ void setup()
   Serial.printf("\nРазмер cyclicArray %d, stdArr %d, vector %d", sizeof(cyclicArray), sizeof(stdArr),sizeof(vector));
   Serial.printf("\nРазмер масивов по %d ячеек;\nКоличество повторений при замере времени %d раз.\n\n", ARR_SIZE, ITERATIONS);
 
-Serial.println("\nВремя сдвига:\n");
+  Serial.println("\nВремя сдвига:\n");
 // ____________________Сдвиг массивов
   c = ITERATIONS;
   startTime = millis();
