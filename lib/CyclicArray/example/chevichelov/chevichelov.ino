@@ -1,12 +1,12 @@
 #define UART_DEBUG
 #include "debug.h"
 #include <Arduino.h>
-#include "QuickShiftArray.h"
+#include "CyclicArray.h"
 #include <array>
 #define ARR_SIZE 161            //Количество ячеек массива
 #define ITERATIONS 10000
 
-QuickShiftArray<int> quickShiftArray(ARR_SIZE);
+CyclicArray<int> cyclicArray(ARR_SIZE);
 int measure = 0;                // значение нового измерения
 int MAX = 0;
 uint32_t startTime = 0;
@@ -31,8 +31,8 @@ void setup()
 
 
 //___Новый алгоритм. При каждом замере сдвигает массив влево. Новое значение пишет в конец массива____
-  for (size_t i = 0; i < quickShiftArray.size(); i++) // обнуляем массив
-    quickShiftArray[i] = 0;
+  for (size_t i = 0; i < cyclicArray.size(); i++) // обнуляем массив
+    cyclicArray[i] = 0;
 
   size_t c = ITERATIONS;                  // количество замеров
   startTime = millis();
@@ -42,13 +42,13 @@ void setup()
 
     if (measure >= MAX)             // Если намеряли больше максимума
       MAX = measure;                // Сохранили новый максимум
-    else if (quickShiftArray[0] == MAX){ // Намеряли немного. Если отбрасываемое значение было максимумом то ищем новый
+    else if (cyclicArray[0] == MAX){ // Намеряли немного. Если отбрасываемое значение было максимумом то ищем новый
     // Serial.println("Search max...");
-      for (size_t i = 1; i < quickShiftArray.size(); i++) // т.к. нулевой элемент откинули и он был макс то ищем со второго(1)
-        MAX = std::max(MAX, quickShiftArray[i]);
+      for (size_t i = 1; i < cyclicArray.size(); i++) // т.к. нулевой элемент откинули и он был макс то ищем со второго(1)
+        MAX = std::max(MAX, cyclicArray[i]);
     }
 
-    quickShiftArray.push_back(measure);  // сдвигаем массив влево и в конец добавляем новое значение. Левое значение удаляеться
+    cyclicArray.push_back(measure);  // сдвигаем массив влево и в конец добавляем новое значение. Левое значение удаляеться
     // Serial.printf("max=%lu", MAX);
     // print(DATA);
   }
@@ -56,8 +56,8 @@ void setup()
 
 
   // ________________QuickShiftArray для швабры___________________
-  for (size_t i = 0; i < quickShiftArray.size(); i++) // обнуляем массив
-    quickShiftArray[i] = 0;
+  for (size_t i = 0; i < cyclicArray.size(); i++) // обнуляем массив
+    cyclicArray[i] = 0;
   SAVE_MAX = 0;
   NUMBER = 0;
 
@@ -70,19 +70,19 @@ void setup()
 
     if (measure >= MAX) // Если намеряли больше максимума
       MAX = measure;    // Сохранили новый максимум
-    else if (quickShiftArray[NUMBER] == MAX){ // Намеряли немного. Если отбрасываемое значение было максимумом то ищем новый
+    else if (cyclicArray[NUMBER] == MAX){ // Намеряли немного. Если отбрасываемое значение было максимумом то ищем новый
       // Serial.println("Search max...");
-      for (size_t i = 0; i < quickShiftArray.size(); i++){ 
+      for (size_t i = 0; i < cyclicArray.size(); i++){ 
         if (i == NUMBER) continue; // т.к.  элемент[NUMBER] откинули и он был макс то его не берем в расчет
-        MAX = std::max(MAX, quickShiftArray[i]);
+        MAX = std::max(MAX, cyclicArray[i]);
       }
     }
 
-    quickShiftArray[NUMBER] = measure; // Результат очередного измерения
+    cyclicArray[NUMBER] = measure; // Результат очередного измерения
 
     if (NUMBER == 160)
     {
-      quickShiftArray << 1; // Сдвигаем масив влево на 1
+      cyclicArray << 1; // Сдвигаем масив влево на 1
       --NUMBER;
     }
     ++NUMBER;
