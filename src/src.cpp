@@ -1,155 +1,86 @@
 #include <Arduino.h>
 #include "CyclicArray.h"
-#include <array>
-#include <vector>
-#define ARR_SIZE 100            //Количество ячеек массива
-#define ITERATIONS 100000       // Количество повторений при замере времени
+#define ARR_SIZE 10                     //Количество ячеек массива
 
-    CyclicArray<int> cyclicArray(ARR_SIZE);
-    std::array<int, ARR_SIZE> stdArr;
-    std::vector<int> vector(ARR_SIZE);
-    int classicArr[ARR_SIZE];
+CyclicArray<int> arr(ARR_SIZE);         // создаем массив интов размером ARR_SIZE
 
-    uint32_t startTime;
-    size_t c;
-
-template<typename T>
-inline uint32_t shiftArr(T __first, T __middle, T __last){
-  c = ITERATIONS;
-  startTime = millis();
-  while (c--)
-      std::rotate(__first, __middle, __last);
-  ESP.wdtFeed();
-  return millis()-startTime;
-}
-
-template<typename T>
-inline uint32_t push_back(T __first, T __middle, T __last){
-  c = ITERATIONS;
-  startTime = millis();
-  while (c--){
-      *__first = 0;
-      std::rotate(__first, __middle, __last);
-  }
-  ESP.wdtFeed();
-  return millis()-startTime;
-}
-
-template <typename T>
-inline uint32_t forLoop(T &arr){
-  ESP.wdtFeed();
-  int c = ITERATIONS;
-  uint32_t startTime = millis();
-  while (c--)
-    for(size_t i = 0; i < ARR_SIZE; i++)
-      arr[i] = 0;
-  return millis()-startTime;
-}
-
-template <typename T>
-inline uint32_t rangeBasedForLoop(T &arr){
-  ESP.wdtFeed();
-  size_t c = ITERATIONS;
-  uint32_t startTime = millis();
-  while (c--)
-    for(auto &e : arr)
-      e = 0;
-  return millis()-startTime;
-}
-
-template <typename T>
-inline uint32_t iteratorForLoop(T &arr){
-  ESP.wdtFeed();
-  int c = ITERATIONS;
-  uint32_t startTime = millis();
-  while (c--)
-      for (auto it =  arr.begin(); it != arr.end(); ++it)
-        *it = 0;
-  return millis()-startTime;
-}
-template <typename T>
-inline volatile uint32_t circleFillArr(T &arr){
-  ESP.wdtFeed();
-  int c = ITERATIONS;
-  uint32_t startTime = millis();
-  while (c--)
-    for(auto &e : arr)
-      e = c;
-  return millis()-startTime;
+template <typename T>                   //Функция выводит массив в Serial
+void print(T arr){                      //передача в функцию по значению работает
+  for (size_t i = 0; i < arr.size(); i++)
+   Serial.printf("%d ", arr[i]);
+  Serial.println();
 }
 
 void setup()
 {
-  ESP.wdtDisable();
   Serial.begin(74880);
+  Serial.println();
+  uint32_t freeHeap;
+
+  CyclicArray<int> arr2 {1,2,3,4,5}; //инициализация списком
+  print(arr2);        //1 2 3 4 5
+              Serial.println("arr2 >> 1;");
+  arr2 >> 1;          // сместит весь массив вправо на одну позицию
+  print(arr2);        //5 1 2 3 4
 
 
-  Serial.printf("\nРазмер cyclicArray %d, stdArr %d, vector %d", sizeof(cyclicArray), sizeof(stdArr),sizeof(vector));
-  Serial.printf("\nРазмер масивов по %d ячеек;\nКоличество повторений при замере времени %d раз.\n\n", ARR_SIZE, ITERATIONS);
-
-  Serial.println("\nВремя сдвига:\n");
-// ____________________Сдвиг массивов
-  c = ITERATIONS;
-  startTime = millis();
-  while (c--)
-         cyclicArray << 1;
-  Serial.printf("cyclicArray: \t\t%lu мс\n", millis() - startTime);
-
-  Serial.printf("classicArr: \t\t%u мс\n", shiftArr(classicArr, classicArr + 1, classicArr + ARR_SIZE)); 
-  Serial.printf("std::array: \t\t%u мс\n", shiftArr(stdArr.begin(), stdArr.begin() + 1,  stdArr.end())); 
-  Serial.printf("std::vector: \t\t%u мс\n", shiftArr(vector.begin(), vector.begin() + 1, vector.end())); 
-
-
-// ____________________Заполнение__________________________
-  Serial.println("\nЗаполнение forLoop:\n");
-
-  Serial.printf("cyclicArray: \t\t%u мс\n", forLoop(cyclicArray));
-  Serial.printf("std::array: \t\t%u мс\n", forLoop(stdArr));
-  Serial.printf("std::vector: \t\t%u мс\n", forLoop(vector));
-  Serial.printf("classicArr: \t\t%u мс\n", forLoop(classicArr));
-
- 
-  Serial.println("\nЗаполнение range-based for loop:\n");
-
-  Serial.printf("cyclicArray: \t\t%u мс\n", rangeBasedForLoop(cyclicArray));
-  Serial.printf("std::array: \t\t%u мс\n", rangeBasedForLoop(stdArr));
-  Serial.printf("std::vector: \t\t%u мс\n", rangeBasedForLoop(vector));
-  Serial.printf("classicArr: \t\t%u мс\n", rangeBasedForLoop(classicArr));
+  CyclicArray<int> arr3 = {1,2,3};  //инициализация списком через =
+  print(arr3);        //1 2 3
   
-  Serial.println("\nЗаполнение for loop через итераторы:\n");
+  { CyclicArray<int> arr(10000);    //10000 по 4 байта = 40 000 байт
+    freeHeap = ESP.getFreeHeap();
+  } //Работа деструктора c освобождением памяти
+  Serial.printf("\nОсвободилось %d байт на куче.\n", ESP.getFreeHeap() - freeHeap);       //Освободилось 40008 байт на куче.
+  Serial.printf("sizeof(arr) = %u байт на стеке занимает экземпляр CyclicArray\n", sizeof(arr));   //sizeof(arr) = 20 байт на стеке занимает экземпляр CyclicArray
+  Serial.printf("arr.size() = %u элементов в масиве\n", arr.size());                      //arr.size() = 10 элементов в масиве
+
+  for (byte i = 0; i < arr.size(); i++)
+      arr[i] = i;
+
+  print (arr);        //0 1 2 3 4 5 6 7 8 9
+              Serial.println("arr << 2;");
+  arr << 2;
+  print (arr);        //2 3 4 5 6 7 8 9 0 1
+              Serial.println("arr >> 3;");
+  arr >> 3;
+  print (arr);        //9 0 1 2 3 4 5 6 7 8
+              Serial.println("arr << 1;");
+  arr << 1;
+  print (arr);        //0 1 2 3 4 5 6 7 8 9
+  arr[5]=500;
+  print (arr);        //0 1 2 3 4 500 6 7 8 9
+  arr.push_front(-100);
+  print (arr);        //-100 0 1 2 3 4 500 6 7 8
+  arr.push_back(900);
+  print (arr);        //0 1 2 3 4 500 6 7 8 900
   
-  Serial.printf("cyclicArray: \t\t%u мс\n", iteratorForLoop(cyclicArray));
-  Serial.printf("std::array: \t\t%u мс\n", iteratorForLoop(stdArr));
-  Serial.printf("std::vector: \t\t%u мс\n", iteratorForLoop(vector));
+  int i = 10;
+  for (auto it = arr.begin(); it != arr.end(); ++it)
+    *it = i++;
 
-// ____________________Круговое заполнение__________________________
- Serial.println("\nКруговое циклическое заполнение массива:\n");
-  ESP.wdtFeed();
-  startTime = millis();
-    for (int i = 0; i < ITERATIONS; i++) 
-    cyclicArray++ = i;
-  Serial.printf("cyclicArray \t\t%lu мс\n", millis() - startTime);
+  for(const auto &e : arr)
+    Serial.printf("%d ",e); //10 11 12 13 14 15 16 17 18 19
 
-  Serial.printf("std::array: \t\t%u мс\n", circleFillArr(stdArr));
-  Serial.printf("std::vector: \t\t%u мс\n", circleFillArr(vector));
-  Serial.printf("classicArr: \t\t%u мс\n", circleFillArr(classicArr));
+//_______________Чтение элементов массива используя инкремент и декремент___________
+  Serial.print("\nЧтение элементов массива используя инкремент и декремент:");
+  int element;
+  element = arr++;          //возвратит нулевой элемент массива и переместит внутренний указатель на первый элемент
+  element = arr++;          //возвратит первый элемент массива и переместит внутренний указатель на второй элемент
+  element = ++arr;          //переместит внутренний указатель на третий элемент и возвратит третий элемент массива 
+  Serial.printf("\nelement == %d, circle index = %d\n", element, arr.getCircleIdx());//element == 13, circle index = 3
+  arr-- = 5000;             //Присвоит третьему элементу значение 5000  и переместит внутренний указатель на второй элемент
+  arr.setCircleIdx(0);      //Устанавливаем круговую позицию на нулевой элемент. Команда возвращает значение указанного элемента
+  element = arr.setCircleIdx(0); // element = 10
+  print (arr);              //10 11 12 5000 14 15 16 17 18 19
 
-//____________Вставка в конец со сдвигом остальных элементов влево____________
- Serial.println("\nВставка в конец со сдвигом остальных элементов влево:\n");
-  c = ITERATIONS;
-  startTime = millis();
-  while (c--){
-      cyclicArray << 1;
-      cyclicArray[ARR_SIZE-1] = 0;
+  for(int i = 0; i<ARR_SIZE*4; i++ ){ //Круговое заполнение массива 4 раза с перезаписью прежних данных. Из последней ячейки перескочит на первую.
+     arr++ = i;
+  // ++arr //39 30 31 32 33 34 35 36 37 38 начинает запись в первую ячейку 1->2->3...n->0->1->...
+  // arr++ //30 31 32 33 34 35 36 37 38 39 начинает запись в нулевую ячейку 0->1->2...n->0->...
+  // --arr //39 38 37 36 35 34 33 32 31 30 начинает запись в последнюю ячейку в обратном порядке n->n-1...0->n->...
+  // arr-- //30 39 38 37 36 35 34 33 32 31 начинает запись в нуливую ячейку и идет в обратном порядке 0->n->n-1...1->0...
   }
-  Serial.printf("cyclicArray: \t\t%lu мс\n", millis() - startTime);
+  print (arr);              //30 31 32 33 34 35 36 37 38 39
+}
 
-  Serial.printf("classicArr: \t\t%u мс\n", push_back(classicArr, classicArr + 1, classicArr + ARR_SIZE)); 
-  Serial.printf("std::array: \t\t%u мс\n", push_back(stdArr.begin(), stdArr.begin() + 1,  stdArr.end())); 
-  Serial.printf("std::vector: \t\t%u мс\n", push_back(vector.begin(), vector.begin() + 1, vector.end())); 
-
-
-
- }
-void loop() {  ESP.wdtFeed(); }
-
+void loop(){ yield(); }

@@ -103,7 +103,7 @@ inline CyclicArray<T>::CyclicArray(std::initializer_list<T> initList){
 }
 
 template<typename T>
-CyclicArray<T>::CyclicArray(const CyclicArray& other)
+inline CyclicArray<T>::CyclicArray(const CyclicArray& other)
 					:_size(other._size), arrPtr(other.arrPtr)  {
 	beginPtr = new T[_size];
 	std::copy(other.beginPtr, other.beginPtr + _size, beginPtr);
@@ -124,7 +124,7 @@ inline T& CyclicArray<T>::operator[](size_t index){
 }
 
  template<typename T>
- void CyclicArray<T>::operator << (size_t shift){
+ inline void CyclicArray<T>::operator << (size_t shift){
 	#ifdef VALIDATION
 	  if (shift > _size) shift %= _size;
     #endif
@@ -135,7 +135,7 @@ inline T& CyclicArray<T>::operator[](size_t index){
 }
 
 template<typename T>
-void CyclicArray<T>::operator >> (size_t shift){
+inline void CyclicArray<T>::operator >> (size_t shift){
 	#ifdef VALIDATION
 		if (shift > _size) shift %= _size;
     #endif
@@ -174,13 +174,13 @@ inline T& CyclicArray<T>::operator -- (){//префиксный декремен
 }
 
 template<typename T>
-void CyclicArray<T>::push_back(const T &newVal){
+inline void CyclicArray<T>::push_back(const T &newVal){
 	(*this)[0] = newVal;
 	(*this) << 1;
 }
 
 template<typename T>
-void CyclicArray<T>::push_front(const T &newVal){
+inline void CyclicArray<T>::push_front(const T &newVal){
 	 (*this) >> 1;
 	 (*this)[0] = newVal;
 }
