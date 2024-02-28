@@ -66,6 +66,7 @@ public:
 	CyclicArray(size_t size);						//конструктор. создает на куче массив
 	CyclicArray(std::initializer_list<T> initList);	//конструктор инициализации списком
 	CyclicArray(const CyclicArray& other);			//конструктор копирования для передачи по значению
+	//CyclicArray(const char* str);
 	T& operator [] (size_t index);					//возвращает указатель на элементу массива с номером index
 	void operator >> (size_t shift);				//сдвигает массив вправо (меняется индекс отсчета)
 	void operator << (size_t shift);				//сдвигает массив влево
@@ -75,10 +76,10 @@ public:
 	T& operator -- ();								//префиксный декремент. Возвращает элемент с номером --circleIdx.
 	size_t getCircleIdx(){return circleIdx;} 		//возвращает положение кругового индекса для чтения/записи операторами ++ и --
 	T& setCircleIdx(size_t idx){circleIdx = idx; return (*this)[circleIdx];}//устанавливает круговой индекс для чтения/записи операторами ++ и -- а также возвращает значение установленной позиции
+	void setOffset(size_t shift){offsetPtr = beginPtr + shift;} //Сдвигает массив влево начиная с нулевого элемента без учета прежних сдвигов
+	size_t getOffset() const {return offsetPtr - beginPtr;}            //Возвращает сдвиг
 	void push_back(const T &newVal);				//сдвигает массив влево на одну позицию и добавляет в последнюю элемент новые данные
 	void push_front(const T &newVal);				//сдвигает массив вправо на одну позицию и добавляет в начальную элемент новые данные
-	void setShift(size_t shift){offsetPtr = beginPtr + shift;} //Сдвигает массив влево начиная с нулевого элемента без учета прежних сдвигов
-	size_t getShift(){return offsetPtr - beginPtr;}            //Возвращает сдвиг
 	size_t size() const{return _size;};						//возвращает количество элементов массива
 	Iterator begin() const { return Iterator(beginPtr, offsetPtr, endPtr); } //Возвращает iterator. Необходим для работы цикла по диапазону 
 	Iterator end() const { return Iterator(beginPtr, endPtr, endPtr); }
@@ -86,14 +87,14 @@ public:
 };
 
 template<typename T>
-inline CyclicArray<T>::CyclicArray(size_t size) : _size(size) {
+CyclicArray<T>::CyclicArray(size_t size) : _size(size) {
 	beginPtr = new T[_size];
 	offsetPtr = beginPtr;
 	endPtr = beginPtr + _size;
 }
 
 template<typename T>
-inline CyclicArray<T>::CyclicArray(std::initializer_list<T> initList){
+CyclicArray<T>::CyclicArray(std::initializer_list<T> initList){
 	_size = initList.size();
 	beginPtr = new T[_size];
 	offsetPtr = beginPtr;
@@ -102,16 +103,25 @@ inline CyclicArray<T>::CyclicArray(std::initializer_list<T> initList){
 }
 
 template<typename T>
-inline CyclicArray<T>::CyclicArray(const CyclicArray& other)
-					:_size(other._size), offsetPtr(other.offsetPtr)  {
+CyclicArray<T>::CyclicArray(const CyclicArray& other)
+					:_size(other._size)  {
 	beginPtr = new T[_size];
 	std::copy(other.beginPtr, other.beginPtr + _size, beginPtr);
 	offsetPtr = beginPtr + (other.offsetPtr-other.beginPtr);
 	endPtr = beginPtr + _size;
 }
 
+// template<typename T>
+// CyclicArray<T>::CyclicArray(const char* str) {
+//     _size = strlen(str)+1;
+//     beginPtr = new char[_size];
+//     offsetPtr = beginPtr;
+//     endPtr = beginPtr + _size;
+//     strcpy(beginPtr, str);
+// }
+
 template<typename T>
-inline T& CyclicArray<T>::operator[](size_t index){
+T& CyclicArray<T>::operator[](size_t index){
 	#ifdef VALIDATION
 		if (index > _size) index %= _size;
 	#endif
@@ -123,7 +133,7 @@ inline T& CyclicArray<T>::operator[](size_t index){
 }
 
 template<typename T>
-inline void CyclicArray<T>::operator << (size_t shift){
+void CyclicArray<T>::operator << (size_t shift){
 	#ifdef VALIDATION
 		if (shift > _size) shift %= _size;
 	#endif
@@ -134,7 +144,7 @@ inline void CyclicArray<T>::operator << (size_t shift){
 }
 
 template<typename T>
-inline void CyclicArray<T>::operator >> (size_t shift){
+void CyclicArray<T>::operator >> (size_t shift){
 	#ifdef VALIDATION
 		if (shift > _size) shift %= _size;
 	#endif
@@ -145,41 +155,41 @@ inline void CyclicArray<T>::operator >> (size_t shift){
 }
 
 template<typename T>
-inline T& CyclicArray<T>::operator ++ (int){
+T& CyclicArray<T>::operator ++ (int){
 	if (circleIdx == _size)
 		circleIdx = 0;
 	return (*this)[circleIdx++];
 }
 
 template<typename T>
-inline T& CyclicArray<T>::operator ++ (){
+T& CyclicArray<T>::operator ++ (){
 	if (++circleIdx == _size)
 		circleIdx = 0;
 	return (*this)[circleIdx];
 }
 
 template<typename T>
-inline T& CyclicArray<T>::operator -- (int){ //Постфиксный декремент
+T& CyclicArray<T>::operator -- (int){ //Постфиксный декремент
 	if (circleIdx == 0)
 		circleIdx = _size;
 	return (*this)[circleIdx--];
 }
 
 template<typename T>
-inline T& CyclicArray<T>::operator -- (){//префиксный декремент
+T& CyclicArray<T>::operator -- (){//префиксный декремент
 	if (circleIdx == 0)
 		circleIdx = _size;
 	return (*this)[--circleIdx];
 }
 
 template<typename T>
-inline void CyclicArray<T>::push_back(const T &newVal){
+void CyclicArray<T>::push_back(const T &newVal){
 	(*this)[0] = newVal;
 	(*this) << 1;
 }
 
 template<typename T>
-inline void CyclicArray<T>::push_front(const T &newVal){
+void CyclicArray<T>::push_front(const T &newVal){
 	(*this) >> 1;
 	(*this)[0] = newVal;
 }

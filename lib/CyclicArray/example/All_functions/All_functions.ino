@@ -1,72 +1,79 @@
 #include <Arduino.h>
 #include "CyclicArray.h"
-#define ARR_SIZE 10                     //Количество элементов массива
+#define ARR_SIZE 10                     //Количество элементов массива. 
 
-CyclicArray<int> arr(ARR_SIZE);         // создаем массив интов размером ARR_SIZE
+CyclicArray<int> arr(ARR_SIZE);         // создаем массив интов размером ARR_SIZE на куче
 
 template <typename T>                   //Функция выводит массив в Serial
-void print(T arr){                      //передача в функцию по значению работает
-  for (size_t i = 0; i < arr.size(); i++)
-    Serial.printf("%d ", arr[i]);
+void print(T arr){                      //передача в функцию по значению работает (конструктор копии)
+  for (auto &e : arr)
+    Serial.printf("%d ", e);
   Serial.println();
 }
 
 void setup()
 {
   Serial.begin(74880);
-  Serial.println();
+              Serial.println();
+
+  auto ShowStr = [](auto str){Serial.printf("%s, %s %s\n",str[0], str[1], str[2]);};
+  CyclicArray<const char*> str{"казнить", "нельзя", "помиловать"}; //инициализация списком
+  ShowStr(str);       //казнить, нельзя помиловать
+  str >> 1;           //сдвинуть весь массив вправо на одну позицию
+  ShowStr(str);       //помиловать, казнить нельзя
+
   uint32_t freeHeap;
-
-  CyclicArray<int> arr2 {1,2,3,4,5}; //инициализация списком
-  print(arr2);        //1 2 3 4 5
-              Serial.println("arr2 >> 1;");
-  arr2 >> 1;          // сместит весь массив вправо на одну позицию
-  print(arr2);        //5 1 2 3 4
-
-
-  CyclicArray<int> arr3 = {1,2,3};  //инициализация списком через =
-  print(arr3);        //1 2 3
-  
   { CyclicArray<int> arr(10000);    //10000 по 4 байта = 40 000 байт
     freeHeap = ESP.getFreeHeap();
   } //Работа деструктора c освобождением памяти
-  Serial.printf("\nОсвободилось %d байт на куче.\n", ESP.getFreeHeap() - freeHeap);       //Освободилось 40008 байт на куче.
-  Serial.printf("sizeof(arr) = %u байт на стеке занимает экземпляр CyclicArray\n", sizeof(arr));   //sizeof(arr) = 20 байт на стеке занимает экземпляр CyclicArray
-  Serial.printf("arr.size() = %u элементов в масиве\n", arr.size());                      //arr.size() = 10 элементов в масиве
+              Serial.printf("\nОсвободилось %d байт на куче.\n", ESP.getFreeHeap() - freeHeap);       //Освободилось 40008 байт на куче.
+              Serial.printf("sizeof(arr) = %u байт на стеке занимает экземпляр CyclicArray\n", sizeof(arr));   //sizeof(arr) = 20 байт на стеке занимает экземпляр CyclicArray
+              Serial.printf("arr.size() = %u элементов в масиве\n", arr.size());                      //arr.size() = 10 элементов в масиве
 
   for (byte i = 0; i < arr.size(); i++)
-      arr[i] = i;
+    arr[i] = i;
 
   print (arr);        //0 1 2 3 4 5 6 7 8 9
               Serial.println("arr << 2;");
   arr << 2;
   print (arr);        //2 3 4 5 6 7 8 9 0 1
+  Serial.printf("После сдвига arr[0] читается из ячейки [%d] исходного массива\n", arr.getOffset()); // из ячейки [2]
+             
               Serial.println("arr >> 3;");
   arr >> 3;
   print (arr);        //9 0 1 2 3 4 5 6 7 8
               Serial.println("arr << 1;");
   arr << 1;
   print (arr);        //0 1 2 3 4 5 6 7 8 9
+
   arr[5]=500;
   print (arr);        //0 1 2 3 4 500 6 7 8 9
+
   arr.push_front(-100);
   print (arr);        //-100 0 1 2 3 4 500 6 7 8
+
   arr.push_back(900);
   print (arr);        //0 1 2 3 4 500 6 7 8 900
   
   int i = 10;
   for (auto it = arr.begin(); it != arr.end(); ++it)
     *it = i++;
-  print (arr);              //10 11 12 13 14 15 16 17 18 19
+
+              Serial.println();
+  print (arr);         //10 11 12 13 14 15 16 17 18 19
 
   arr << 5;
   for(const auto &e : arr)
-    Serial.printf("%d ",e);     //15 16 17 18 19 10 11 12 13 14
+    Serial.printf("%d ", e);     //15 16 17 18 19 10 11 12 13 14
   Serial.println();
 
-  for (auto it = arr.begin(); it != arr.end(); ++it)
-    Serial.printf("%d ",*it);   //15 16 17 18 19 10 11 12 13 14
-  arr >> 5;
+  auto ShowArr = [](int val){Serial.printf("%d ", val);};
+  std::for_each(arr.begin(), arr.end(), ShowArr); //15 16 17 18 19 10 11 12 13 14
+
+  auto predicate_IsEven = [](int val){return val % 2 == 0;};
+  size_t evenNumbersCount = std::count_if(arr.begin(), arr.end(), predicate_IsEven);
+  Serial.printf("\nЧетных чисел в массиве %d шт. Нечетных %d шт.", evenNumbersCount, arr.size()-evenNumbersCount);
+  arr.setOffset(0);             // установить смещение массива в нулевую позицию (исходный массив) 
 //_______________Чтение элементов массива используя инкремент и декремент___________
   Serial.print("\nЧтение элементов массива используя инкремент и декремент:");
   int element;
@@ -79,7 +86,7 @@ void setup()
   element = arr.setCircleIdx(0); // element = 10
   print (arr);              //10 11 12 5000 14 15 16 17 18 19
 
-  for(int i = 0; i<ARR_SIZE*4; i++ ){ //Круговое заполнение массива 4 раза с перезаписью прежних данных. Последний элемент перескочит на первую позицию.
+  for(int i = 0; i<ARR_SIZE * 4; i++ ){ //Круговое заполнение массива 4 раза с перезаписью прежних данных. После записи последнего элемента начинаем запись с начала массива.
      arr++ = i;
   // ++arr //39 30 31 32 33 34 35 36 37 38 начинает запись в первый индекс 1->2->3...n->0->1->...
   // arr++ //30 31 32 33 34 35 36 37 38 39 начинает запись в нулевой индекс 0->1->2...n->0->...
