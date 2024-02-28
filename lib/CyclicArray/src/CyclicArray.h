@@ -44,23 +44,26 @@ CyclicArray<ТИП_ДАННЫХ> НАЗВАНИЕ_МАССИВА(КОЛИЧЕС�
 template<typename T>
 class CyclicArray
 {
-	size_t _size = 0;			//хранит количество элементов массива
-	T* beginPtr = nullptr;		//указатель на начало созданного массив на куче
-	T* offsetPtr = nullptr;		//указатель начального положение массива с учетом сдвига массива
-	T* endPtr = nullptr;		//указатель на конец массива
-	size_t circleIdx = 0;		//индекс для обращения к массиву через операторы ++ и --
+	size_t _size{0};			//хранит количество элементов массива
+	T* beginPtr {nullptr};		//указатель на начало созданного массив на куче
+	T* offsetPtr {nullptr};		//указатель начального положение массива с учетом сдвига массива
+	T* endPtr {nullptr};		//указатель на конец массива
+	size_t circleIdx {0};		//индекс для обращения к массиву через операторы ++ и --
 public:
 	class Iterator : public std::iterator<std::random_access_iterator_tag, T> {
-			size_t size, offset; T* endPtr; T* offsetPtr;	//размер массива, указатели на конец массива и нулевую позицию, заданную пользователем в диапазоне массива
-		public: 
+			size_t size, offset; T *beginPtr, *endPtr, *offsetPtr;	//размер массива, смещение, указатели на начало, конец массива и нулевую позицию, заданную пользователем в диапазоне массива
+	public: 
 			explicit Iterator(T* beginPtr, T* offsetPtr, T* endPtr) :
-				size(endPtr-beginPtr), offset(offsetPtr-beginPtr), endPtr(endPtr), offsetPtr(offsetPtr){}
-			Iterator& operator++() {++offsetPtr; return *(this);}
-			Iterator& operator--() {--offsetPtr; return *this;}
-			bool operator==(const Iterator& other) const { return offsetPtr == other.offsetPtr + offset; }
-			bool operator!=(const Iterator& other) const { return !(*this == other); }
-			//bool operator<(const Iterator& other) const { return (*this < other); }
-			T& operator*() { return (offsetPtr < endPtr) ? *offsetPtr : *(offsetPtr - size); }
+				size(endPtr-beginPtr), offset(offsetPtr-beginPtr), beginPtr(beginPtr), endPtr(endPtr), offsetPtr(offsetPtr){}
+			Iterator&	operator ++ () {++offsetPtr; return *this;}
+			Iterator&	operator -- () {--offsetPtr; return *this;}
+			Iterator	operator +  (int n) const { return Iterator(beginPtr+1, offsetPtr + n, endPtr); }
+			Iterator	operator -  (int n) const { return Iterator(beginPtr+1, offsetPtr - n, endPtr); }
+			bool		operator == (const Iterator& other) const { return offsetPtr == other.offsetPtr + offset; }
+			bool		operator != (const Iterator& other) const { return !(offsetPtr == other.offsetPtr + offset); }
+			bool		operator <  (const Iterator& other) const { return offsetPtr < other.offsetPtr; }
+			int			operator -  (const Iterator& other) const { return offsetPtr - other.offsetPtr; }
+			T&			operator *  () { return (offsetPtr < endPtr) ? *offsetPtr : *(offsetPtr - size); }
 	};
 
 	CyclicArray(size_t size);						//конструктор. создает на куче массив
@@ -74,9 +77,9 @@ public:
 	T& operator ++ ();								//префиксный инкремент. Возвращает элемент с номером ++circleIdx.
 	T& operator -- (int); 							//постфиксный декремент. Возвращает элемент с номером circleIdx--.
 	T& operator -- ();								//префиксный декремент. Возвращает элемент с номером --circleIdx.
-	size_t getCircleIdx(){return circleIdx;} 		//возвращает положение кругового индекса для чтения/записи операторами ++ и --
+	size_t getCircleIdx()const{return circleIdx;} 		//возвращает положение кругового индекса для чтения/записи операторами ++ и --
 	T& setCircleIdx(size_t idx){circleIdx = idx; return (*this)[circleIdx];}//устанавливает круговой индекс для чтения/записи операторами ++ и -- а также возвращает значение установленной позиции
-	void setOffset(size_t shift){offsetPtr = beginPtr + shift;} //Сдвигает массив влево начиная с нулевого элемента без учета прежних сдвигов
+	void setOffset(size_t offset){offsetPtr = beginPtr + offset;} //Сдвигает массив влево начиная с нулевого элемента без учета прежних сдвигов
 	size_t getOffset() const {return offsetPtr - beginPtr;}            //Возвращает сдвиг
 	void push_back(const T &newVal);				//сдвигает массив влево на одну позицию и добавляет в последнюю элемент новые данные
 	void push_front(const T &newVal);				//сдвигает массив вправо на одну позицию и добавляет в начальную элемент новые данные
@@ -104,9 +107,9 @@ CyclicArray<T>::CyclicArray(std::initializer_list<T> initList){
 
 template<typename T>
 CyclicArray<T>::CyclicArray(const CyclicArray& other)
-					:_size(other._size)  {
+					:_size(other._size), circleIdx(other.circleIdx)  {
 	beginPtr = new T[_size];
-	std::copy(other.beginPtr, other.beginPtr + _size, beginPtr);
+	std::copy(other.beginPtr, other.endPtr, beginPtr);
 	offsetPtr = beginPtr + (other.offsetPtr-other.beginPtr);
 	endPtr = beginPtr + _size;
 }
