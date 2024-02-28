@@ -17,7 +17,7 @@ void setup()
               Serial.println();
   CyclicArray<int>sortArr{-1,5,-2,3,9,7,4,1,2};
   std::sort(sortArr.begin(), sortArr.end(), std::greater<int>());  
-  print(sortArr);       
+  print(sortArr);     //9 7 5 4 3 2 1 -1 -2  
 
   auto ShowStr = [](auto str){Serial.printf("%s, %s %s\n",str[0], str[1], str[2]);};
   CyclicArray<const char*> str{"казнить", "нельзя", "помиловать"}; //инициализация списком
