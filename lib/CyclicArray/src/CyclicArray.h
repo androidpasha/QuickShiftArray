@@ -51,25 +51,30 @@ class CyclicArray
 	size_t circleIdx {0};		//индекс для обращения к массиву через операторы ++ и --
 public:
 	class Iterator : public std::iterator<std::random_access_iterator_tag, T> {
-			size_t size, offset; T *beginPtr, *endPtr, *offsetPtr;	//размер массива, смещение, указатели на начало, конец массива и нулевую позицию, заданную пользователем в диапазоне массива
+			size_t size; T *beginPtr, *endPtr, *offsetPtr, *offsetEndPtr; 	//размер массива, смещение, указатели на начало, конец массива и нулевую позицию, заданную пользователем в диапазоне массива
 	public: 
+			Iterator() : size(0), beginPtr(nullptr), endPtr(nullptr), offsetPtr(nullptr), offsetEndPtr(nullptr){} //конструктор по умолчанию
 			explicit Iterator(T* beginPtr, T* offsetPtr, T* endPtr) :
-				size(endPtr-beginPtr), offset(offsetPtr-beginPtr), beginPtr(beginPtr), endPtr(endPtr), offsetPtr(offsetPtr){}
-			Iterator&	operator ++ () {++offsetPtr; return *this;}
-			Iterator&	operator -- () {--offsetPtr; return *this;}
-			Iterator	operator +  (int n) const { return Iterator(beginPtr+1, offsetPtr + n, endPtr); }
-			Iterator	operator -  (int n) const { return Iterator(beginPtr+1, offsetPtr - n, endPtr); }
-			bool		operator == (const Iterator& other) const { return offsetPtr == other.offsetPtr + offset; }
-			bool		operator != (const Iterator& other) const { return !(offsetPtr == other.offsetPtr + offset); }
-			bool		operator <  (const Iterator& other) const { return offsetPtr < other.offsetPtr; }
+				size(endPtr-beginPtr), beginPtr(beginPtr), endPtr(endPtr), offsetPtr(offsetPtr), offsetEndPtr(offsetPtr + size + 1){}
+			Iterator	operator ++ () { ++offsetPtr; return *this;}
+			Iterator&	operator -- () { --offsetPtr; return *this;}
+			Iterator	operator +  (int n) const { return Iterator(beginPtr, offsetPtr + n, endPtr); }
+			Iterator	operator -  (int n) const { return Iterator(beginPtr, offsetPtr - n, endPtr); }
 			int			operator -  (const Iterator& other) const { return offsetPtr - other.offsetPtr; }
-			T&			operator *  () { return (offsetPtr < endPtr) ? *offsetPtr : *(offsetPtr - size); }
+			bool		operator == (const Iterator& other) { return (offsetPtr == other.offsetEndPtr); }
+			bool		operator != (const Iterator& other) { return (offsetPtr != other.offsetEndPtr);  }
+			bool		operator <  (const Iterator& other) const { return offsetPtr < other.offsetPtr; }
+			T&			operator *  () { 
+										if (offsetPtr >= beginPtr and offsetPtr < endPtr) return *offsetPtr;
+										if (offsetPtr >= endPtr) return *(offsetPtr - size);
+										return *(offsetPtr + size);
+										}
+		
 	};
 
 	CyclicArray(size_t size);						//конструктор. создает на куче массив
 	CyclicArray(std::initializer_list<T> initList);	//конструктор инициализации списком
 	CyclicArray(const CyclicArray& other);			//конструктор копирования для передачи по значению
-	//CyclicArray(const char* str);
 	T& operator [] (size_t index);					//возвращает указатель на элементу массива с номером index
 	void operator >> (size_t shift);				//сдвигает массив вправо (меняется индекс отсчета)
 	void operator << (size_t shift);				//сдвигает массив влево
@@ -84,9 +89,10 @@ public:
 	void push_back(const T &newVal);				//сдвигает массив влево на одну позицию и добавляет в последнюю элемент новые данные
 	void push_front(const T &newVal);				//сдвигает массив вправо на одну позицию и добавляет в начальную элемент новые данные
 	size_t size() const{return _size;};						//возвращает количество элементов массива
-	Iterator begin() const { return Iterator(beginPtr, offsetPtr, endPtr); } //Возвращает iterator. Необходим для работы цикла по диапазону 
-	Iterator end() const { return Iterator(beginPtr, endPtr, endPtr); }
-	~CyclicArray(){ delete[] beginPtr; };									
+	Iterator begin() { return Iterator(beginPtr, offsetPtr, endPtr); } //Возвращает iterator. Необходим для работы цикла по диапазону 
+	Iterator end() { return Iterator(beginPtr, offsetPtr-1, endPtr); }
+	~CyclicArray() { delete[] beginPtr; };	
+	//CyclicArray(const char* str);								
 };
 
 template<typename T>
@@ -114,21 +120,8 @@ CyclicArray<T>::CyclicArray(const CyclicArray& other)
 	endPtr = beginPtr + _size;
 }
 
-// template<typename T>
-// CyclicArray<T>::CyclicArray(const char* str) {
-//     _size = strlen(str)+1;
-//     beginPtr = new char[_size];
-//     offsetPtr = beginPtr;
-//     endPtr = beginPtr + _size;
-//     strcpy(beginPtr, str);
-// }
-
 template<typename T>
 T& CyclicArray<T>::operator[](size_t index){
-	#ifdef VALIDATION
-		if (index > _size) index %= _size;
-	#endif
-
 	if (index + offsetPtr < endPtr)
 		return offsetPtr[index];
 	else
@@ -196,3 +189,12 @@ void CyclicArray<T>::push_front(const T &newVal){
 	(*this) >> 1;
 	(*this)[0] = newVal;
 }
+
+// template<typename T>
+// CyclicArray<T>::CyclicArray(const char* str) {
+//     _size = strlen(str)+1;
+//     beginPtr = new char[_size];
+//     offsetPtr = beginPtr;
+//     endPtr = beginPtr + _size;
+//     strcpy(beginPtr, str);
+// }

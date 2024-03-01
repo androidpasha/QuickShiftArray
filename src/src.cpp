@@ -15,9 +15,9 @@ void setup()
 {
   Serial.begin(74880);
               Serial.println();
-  CyclicArray<int>sortArr{-1,5,-2,3,9,7,4,1,2};
+  CyclicArray<int>sortArr{-1,1,-3,3,-2,2,-5,5,-4,4};
   std::sort(sortArr.begin(), sortArr.end(), std::greater<int>());  
-  print(sortArr);     //9 7 5 4 3 2 1 -1 -2  
+  print(sortArr);       
 
   auto ShowStr = [](auto str){Serial.printf("%s, %s %s\n",str[0], str[1], str[2]);};
   CyclicArray<const char*> str{"казнить", "нельзя", "помиловать"}; //инициализация списком
@@ -44,6 +44,7 @@ void setup()
              
               Serial.println("arr >> 3;");
   arr >> 3;
+  // arr >> arr.getOffset();// Установить смещение в 0.
   print (arr);        //9 0 1 2 3 4 5 6 7 8
               Serial.println("arr << 1;");
   arr << 1;
