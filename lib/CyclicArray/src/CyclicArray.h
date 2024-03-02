@@ -37,9 +37,8 @@ CyclicArray<ТИП_ДАННЫХ> НАЗВАНИЕ_МАССИВА(КОЛИЧЕС�
 #include <iterator>
 #include <initializer_list>
 #ifdef ARDUINO
-#include<Arduino.h>
+	#include<Arduino.h>
 #endif
-//#define VALIDATION // проверка на обращение к элементам вне массива и сдвигам более длинны массива. Немного замедляет работу. !!! Не работает для итераторов!
 
 template<typename T>
 class CyclicArray
@@ -52,24 +51,40 @@ class CyclicArray
 public:
 	class Iterator : public std::iterator<std::random_access_iterator_tag, T> {
 			size_t size; T *beginPtr, *endPtr, *offsetPtr, *offsetEndPtr; 	//размер массива, смещение, указатели на начало, конец массива и нулевую позицию, заданную пользователем в диапазоне массива
-	public: 
+	public:
 			Iterator() : size(0), beginPtr(nullptr), endPtr(nullptr), offsetPtr(nullptr), offsetEndPtr(nullptr){} //конструктор по умолчанию
 			explicit Iterator(T* beginPtr, T* offsetPtr, T* endPtr) :
 				size(endPtr-beginPtr), beginPtr(beginPtr), endPtr(endPtr), offsetPtr(offsetPtr), offsetEndPtr(offsetPtr + size + 1){}
-			Iterator	operator ++ () { ++offsetPtr; return *this;}
-			Iterator&	operator -- () { --offsetPtr; return *this;}
-			Iterator	operator +  (int n) const { return Iterator(beginPtr, offsetPtr + n, endPtr); }
-			Iterator	operator -  (int n) const { return Iterator(beginPtr, offsetPtr - n, endPtr); }
-			int			operator -  (const Iterator& other) const { return offsetPtr - other.offsetPtr; }
-			bool		operator == (const Iterator& other) { return (offsetPtr == other.offsetEndPtr); }
-			bool		operator != (const Iterator& other) { return (offsetPtr != other.offsetEndPtr);  }
-			bool		operator <  (const Iterator& other) const { return offsetPtr < other.offsetPtr; }
-			T&			operator *  () { 
+			T*			operator ->	() { return &(*this); }
+			Iterator&	operator ++	() { ++offsetPtr; return *this; }
+			Iterator&	operator --	() { --offsetPtr; return *this; }
+			Iterator	operator +	(int n) const { return Iterator(beginPtr, offsetPtr + n, endPtr); }
+			Iterator	operator -	(int n) const { return Iterator(beginPtr, offsetPtr - n, endPtr); }
+			int			operator -	(const Iterator& other) const { return offsetPtr - other.offsetPtr  + size + 1; }
+			Iterator&	operator +=	(size_t n) { offsetPtr += n; return *this; }
+			Iterator&	operator -=	(size_t n) { offsetPtr -= n; return *this; }
+			bool		operator ==	(const Iterator& other) { return (offsetPtr == other.offsetEndPtr); }
+/*Не работает для --!!*/bool		operator !=	(const Iterator& other) { return (offsetPtr != other.offsetEndPtr)and(offsetPtr + size + 1 != other.offsetEndPtr); }
+			bool		operator <	(const Iterator& other) const { return offsetPtr < other.offsetPtr; }
+			bool		operator >	(const Iterator& other) const { return offsetPtr > other.offsetPtr; }
+			bool		operator <=	(const Iterator& other) const { return offsetPtr <= other.offsetPtr; }
+			bool		operator >=	(const Iterator& other) const { return offsetPtr >= other.offsetPtr; }
+			T&			operator [] (size_t index){return *(Iterator(beginPtr, offsetPtr + index, endPtr));}
+			T&			operator *	() { 
 										if (offsetPtr >= beginPtr and offsetPtr < endPtr) return *offsetPtr;
 										if (offsetPtr >= endPtr) return *(offsetPtr - size);
 										return *(offsetPtr + size);
 										}
-		
+			Iterator& 	operator =	(const Iterator& other) {
+									if (this != &other) {
+										size = other.size;
+										beginPtr = other.beginPtr;
+										endPtr = other.endPtr;
+										offsetPtr = other.offsetPtr;
+										offsetEndPtr = other.offsetEndPtr;
+									}
+				return *this;
+			}
 	};
 
 	CyclicArray(size_t size);						//конструктор. создает на куче массив
@@ -130,10 +145,6 @@ T& CyclicArray<T>::operator[](size_t index){
 
 template<typename T>
 void CyclicArray<T>::operator << (size_t shift){
-	#ifdef VALIDATION
-		if (shift > _size) shift %= _size;
-	#endif
-
 	offsetPtr += shift; 
 	if (offsetPtr >= endPtr)
 		offsetPtr -= _size;
@@ -141,10 +152,6 @@ void CyclicArray<T>::operator << (size_t shift){
 
 template<typename T>
 void CyclicArray<T>::operator >> (size_t shift){
-	#ifdef VALIDATION
-		if (shift > _size) shift %= _size;
-	#endif
-		
 	offsetPtr -= shift;
 	if (offsetPtr < endPtr)
 		offsetPtr += _size;
@@ -192,9 +199,9 @@ void CyclicArray<T>::push_front(const T &newVal){
 
 // template<typename T>
 // CyclicArray<T>::CyclicArray(const char* str) {
-//     _size = strlen(str)+1;
-//     beginPtr = new char[_size];
-//     offsetPtr = beginPtr;
-//     endPtr = beginPtr + _size;
-//     strcpy(beginPtr, str);
+// 	_size = strlen(str)+1;
+// 	beginPtr = new char[_size];
+// 	offsetPtr = beginPtr;
+// 	endPtr = beginPtr + _size;
+// 	strcpy(beginPtr, str);
 // }
