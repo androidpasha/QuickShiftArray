@@ -153,3 +153,50 @@ void setup()
  }
 void loop() {  ESP.wdtFeed(); }
 
+/*
+Размер cyclicArray 20, stdArr 400, vector 12
+Размер масивов по 100 ячеек;
+Количество повторений при замере времени 100000 раз.
+
+
+Время сдвига:
+
+cyclicArray:            10 мс
+classicArr:             511 мс
+std::array:             511 мс
+std::vector:            516 мс
+
+Заполнение forLoop:
+
+cyclicArray:            3630 мс
+std::array:             312 мс
+std::vector:            308 мс
+classicArr:             313 мс
+
+Заполнение range-based for loop:
+
+cyclicArray:            4938 мс
+std::array:             314 мс
+std::vector:            312 мс
+classicArr:             314 мс
+
+Заполнение for loop через итераторы:
+
+cyclicArray:            7685 мс
+std::array:             313 мс
+std::vector:            307 мс
+
+Круговое циклическое заполнение массива:
+
+cyclicArray             64 мс
+std::array:             1630 мс
+std::vector:            1008 мс
+classicArr:             1631 мс
+
+Вставка в конец со сдвигом остальных элементов влево:
+
+cyclicArray:            51 мс
+classicArr:             516 мс
+std::array:             516 мс
+std::vector:            524 мс
+*/

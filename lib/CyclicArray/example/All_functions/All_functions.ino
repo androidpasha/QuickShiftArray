@@ -3,12 +3,24 @@
 
 #define ARR_SIZE 10                     //Количество элементов массива. 
 CyclicArray<int> arr(ARR_SIZE);         // создаем массив интов размером ARR_SIZE на куче
+CyclicArray<int, ARR_SIZE> nextArr;     // создаем массив интов размером ARR_SIZE на куче
+CyclicArray<int> zeroArr;               // создаем массив интов размером 0 на куче. Дальше метод zeroArr.setSize(NEW_ARR_SIZE) изменяет размер. На куче создается новый массив и в него копируеться старые элементы если были в количестве <= NEW_ARR_SIZE
 
 template <typename T>                   //Функция выводит массив в Serial
 void print(T arr){                      //передача по значению (вызываеться конструктор копии)
   for (auto &e : arr)
     Serial.printf("%d ", e);
   Serial.println();
+}
+
+template <typename T> 
+void print2darr(T &arr2d){                 //передача по ссылке 
+    const int rows = arr2d.size(), cols = arr2d[0].size();
+    for (int i = 0; i < rows; i++) {
+        Serial.printf("\n");
+        for (int j = 0; j < cols; j++)
+            Serial.printf("%d\t", arr2d[i][j]);
+    }
 }
 
 void setup()
@@ -108,6 +120,55 @@ void setup()
   print (arr);              //30 310 32 33 34 35 36 37 38 39
   arr++ = 320;              // 1й єлемент = 320. CircleIdx переместится на 2й єлемент
   print (arr);              //30 320 32 33 34 35 36 37 38 39 т.к. массив сдвинулся (arr >> 1;) получаем такой результат
+    {
+      CyclicArray<int> arr;
+      CyclicArray<int> arr2{1,2,3};
+      
+      Serial.printf("\n\nCyclicArray<int> arr;\narr.size()=%d\n",arr.size());
+      arr.setSize(10);
+      Serial.printf("arr.setSize(10);\narr.size()=%d\n",arr.size());
+      print(arr);       //мусор 0 35 36 37 38 39 891336144 13048281 0 -776613731
+      arr=arr2;
+      Serial.printf("CyclicArray<int> arr2{1,2,3};\narr=arr2\n");
+      print(arr);       //1 2 3
+      Serial.printf("arr.size()=%d\n",arr.size());
+      arr.setSize(5);
+      Serial.printf("arr.setSize(5)\n");
+      print(arr);       //1 2 3 13310425 0
+      arr[3] = 4;
+      arr.setSize(4);
+      Serial.printf("arr[3] = 4;\narr.setSize(4)\n");
+      print(arr);       //1 2 3 4
+    }
+    {//2D array 
+      CyclicArray<int> rows1{1,2,3};
+      CyclicArray<int> rows2{4,5,6};
+      CyclicArray<int> rows3{7,8,9};
+
+      CyclicArray<CyclicArray<int>> arr2d{rows1, rows2, rows3 };
+      //CyclicArray<CyclicArray<int>> arr{ {1,2,3}, {4,5,6}, {7,8,9} }; // Тот же результат
+      // arr2d[2][0] = 0; //Работа с элементами
+      print2darr(arr2d);/* result:
+                      1       2       3
+                      4       5       6
+                      7       8       9  */
+      Serial.println();
+    }   
+    
+    {//2D array
+      CyclicArray<CyclicArray<int, 3>, 4> arr2d; //  3 столбца 4 строки
+      const int rows = arr2d.size(), cols = arr2d[0].size();
+      for (int i{}; i < rows; ++i)
+          for (int j{}; j < cols; ++j)
+              arr2d[i][j] = i * cols + j + 1;
+      // for (int i{}; i < rows; ++i) 
+      //     arr2d[i] >> 1;  // сдвиг столбцов вправо
+      print2darr(arr2d);/*  1       2       3
+                            4       5       6
+                            7       8       9
+                            10      11      12*/
+    }
+
 delay(1000000);
 }
 
