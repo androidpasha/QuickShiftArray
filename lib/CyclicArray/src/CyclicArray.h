@@ -1,23 +1,22 @@
 /* Библиотека сдвигового массива.
 Основное преимущество над классическим массивом скорость сдвига O(1) и составляет
 примерно 0,1 мкс для ESP8266. Для сравнения сдвиг класического массива из
-100 элементов занимает примерно 4,5 мкс.
+занимает примерно 4,5 мкс.
 (например был массив 0123 при сдвиге влево на 1 вышло 1230)
 Присутствует функция push_back и push_front для добавления новых данных в края массива,
 при этом массив сдвигается влево(вправо) на один элемент. противоположный вставке
 элемент исчезает.
 ---
 При создании экземпляра на куче выделяется память под новый массив.
+Размер массива можно изменять мтодом setSize. Данные сохраняються в пределах нового размера.
 Библиотека хранит номер элемента, с которого при вызове оператора [index]
 начинается отсчет "нулевого элемента для пользователя". При сдвиге массива
 изменяется номер элемента начала отсчета вместо перезаписи всего массива.
 ---
-Присутствует конструктор копии для передачи массива по значению.
-При удалении массива (окончание блока кода {}) вызывается деструктор
-который освобождает память на куче.
 Класс CyclicArray шаблонный и может создавать массивы с любыми типами данных:
 CyclicArray<ТИП_ДАННЫХ> НАЗВАНИЕ_МАССИВА(КОЛИЧЕСТВО_ЯЧЕЕК);
-Обращение к ячейкам как в обычном массиве: НАЗВАНИЕ_МАССИВА[ИНДЕКС];
+Например CyclicArray<CyclicArray<int, 4>, 4> arr; создаст двумерный массив 4х4.
+Обращение к ячейкам как в обычном массиве: НАЗВАНИЕ_МАССИВА[ИНДЕКС]; НАЗВАНИЕ_МАССИВА[ИНДЕКС][ИНДЕКС] для 2D
 Добавление новых данных в конец со сдвигом массива влево:
 НАЗВАНИЕ_МАССИВА.push_back(НОВОЕ_ЗНАЧЕНИЕ);
 Добавление новых данных в начало со сдвигом массива вправо:
@@ -30,7 +29,6 @@ CyclicArray<ТИП_ДАННЫХ> НАЗВАНИЕ_МАССИВА(КОЛИЧЕС�
 ---
 Недостатки:
 Скорость доступа к элементам дольше чем у классического массива из-за подсчета индексов.
-Частичная совместимость c алгоритмами stl.
 */
 
 #pragma once
@@ -45,7 +43,7 @@ class CyclicArray
 {
 	size_t _size{ 0 };			//хранит количество элементов массива
 	T* beginPtr{ nullptr };		//указатель на начало созданного массив на куче
-	T* offsetPtr{ nullptr };		//указатель начального положение массива с учетом сдвига массива
+	T* offsetPtr{ nullptr };	//указатель начального положение массива с учетом сдвига массива
 	T* endPtr{ nullptr };		//указатель на конец массива
 	size_t circleIdx{ 0 };		//индекс для обращения к массиву через операторы ++ и --
 public:
@@ -54,6 +52,7 @@ public:
 	CyclicArray(size_t size);						//конструктор. создает на куче массив
 	CyclicArray(std::initializer_list<T> initList);	//конструктор инициализации списком
 	CyclicArray(const CyclicArray& other);			//конструктор копирования для передачи по значению
+	CyclicArray(CyclicArray&& other) noexcept;
 	CyclicArray& operator=(const CyclicArray& other);
 	CyclicArray(const char* str);					//инициализация с строкой
 	//T* operator->() { return (*this); }
@@ -74,7 +73,7 @@ public:
 	void setSize(size_t);
 	Iterator begin() { return Iterator(beginPtr, offsetPtr, endPtr); } //Возвращает iterator. Необходим для работы цикла по диапазону 
 	Iterator end() { return Iterator(beginPtr, offsetPtr - 1, endPtr); }
-	~CyclicArray() { delete[] beginPtr; };
+	~CyclicArray() { delete[] beginPtr; _size = 0; beginPtr = offsetPtr = endPtr = nullptr; };
 };
 
 template<typename T, size_t Size>
@@ -110,6 +109,19 @@ CyclicArray<T, Size>::CyclicArray(const CyclicArray& other)
 	offsetPtr = beginPtr + (other.offsetPtr - other.beginPtr);
 	endPtr = beginPtr + _size;
 }
+
+template<typename T, size_t Size>
+CyclicArray<T, Size>::CyclicArray(CyclicArray&& other) noexcept { // Конструктор переноса
+	 if (this != &other) {
+        delete[] beginPtr;
+        _size = std::exchange(other._size, 0); // Перемещение _size и сброс в 0
+        circleIdx = std::exchange(other.circleIdx, 0); // Перемещение circleIdx и сброс в 0
+        beginPtr = std::exchange(other.beginPtr, nullptr); // Перемещение beginPtr и сброс в nullptr
+        offsetPtr = std::exchange(other.offsetPtr, nullptr);
+        endPtr = std::exchange(other.endPtr, nullptr);
+    }
+	
+	}
 
 template<typename T, size_t Size>
 void CyclicArray<T, Size>::setSize(size_t newSize) {
@@ -215,7 +227,9 @@ template<typename T, size_t Size>
 class CyclicArray<T, Size>::Iterator : public std::iterator<std::random_access_iterator_tag, T> {
 	size_t size; T* beginPtr, * endPtr, * offsetPtr, * offsetEndPtr; 	//размер массива, смещение, указатели на начало, конец массива и нулевую позицию, заданную пользователем в диапазоне массива
 public:
-	Iterator() : size(0), beginPtr(nullptr), endPtr(nullptr), offsetPtr(nullptr), offsetEndPtr(nullptr) {} //конструктор по умолчанию
+	Iterator() {} //конструктор по умолчанию
+	Iterator(const Iterator& other) = default;//конструктор копирования
+	Iterator (Iterator&& other) = default; //конструктор переноса
 	explicit Iterator(T* beginPtr, T* offsetPtr, T* endPtr) :
 		size(endPtr - beginPtr), beginPtr(beginPtr), endPtr(endPtr), offsetPtr(offsetPtr), offsetEndPtr(offsetPtr + size + 1) {}
 	T* operator ->	() { return offsetPtr; }
@@ -226,24 +240,20 @@ public:
 	int			operator -	(const Iterator& other) const { return offsetPtr - other.offsetPtr + size + 1; }
 	Iterator& operator +=	(size_t n) { offsetPtr += n; return *this; }
 	Iterator& operator -=	(size_t n) { offsetPtr -= n; return *this; }
-	bool		operator !=	(const Iterator& other) { return (offsetPtr != other.offsetEndPtr) and (offsetPtr + size + 1 != other.offsetEndPtr); } // and (offsetPtr != other.beginPtr - 1) and (other.offsetPtr != beginPtr - 1);}
-	bool		operator ==	(const Iterator& other) { return !(*this != other); }
+	bool		operator !=	(const Iterator& other) const { return (offsetPtr != other.offsetEndPtr) and (offsetPtr + size + 1 != other.offsetEndPtr); } // and (offsetPtr != other.beginPtr - 1) and (other.offsetPtr != beginPtr - 1);}
+	bool		operator ==	(const Iterator& other) const { return !(*this != other); }
 	bool		operator <	(const Iterator& other) const { return offsetPtr < other.offsetPtr; }
 	bool		operator >	(const Iterator& other) const { return offsetPtr > other.offsetPtr; }
 	bool		operator <=	(const Iterator& other) const { return offsetPtr <= other.offsetPtr; }
 	bool		operator >=	(const Iterator& other) const { return offsetPtr >= other.offsetPtr; }
 	T& operator [] (size_t index) { return *(Iterator(beginPtr, offsetPtr + index, endPtr)); }
-	T& operator *	();
+	T& operator *() const;
 	Iterator& operator =	(const Iterator& other);
-	explicit operator void* () const {
-		if (offsetPtr >= beginPtr and offsetPtr < endPtr) return static_cast<void*>(offsetPtr);
-		if (offsetPtr >= endPtr) return static_cast<void*>(offsetPtr - size);
-		return static_cast<void*>(offsetPtr + size);
-	}
+	explicit operator void* () const;
 };
 
 template<typename T, size_t Size>
-T& CyclicArray<T, Size>::Iterator::operator*() {
+T& CyclicArray<T, Size>::Iterator::operator*() const {
 	if (offsetPtr >= beginPtr and offsetPtr < endPtr)
 		return *offsetPtr;
 
@@ -267,4 +277,11 @@ typename CyclicArray<T, Size>::Iterator& CyclicArray<T, Size>::Iterator::operato
 		offsetEndPtr = other.offsetEndPtr;
 	}
 	return *this;
+}
+
+template<typename T, size_t Size>
+CyclicArray<T, Size>::Iterator::operator void* () const {
+		if (offsetPtr >= beginPtr and offsetPtr < endPtr) return static_cast<void*>(offsetPtr);
+		if (offsetPtr >= endPtr) return static_cast<void*>(offsetPtr - size);
+		return static_cast<void*>(offsetPtr + size);
 }

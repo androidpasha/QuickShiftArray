@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include <algorithm>
 #include "CyclicArray.h"
 
 #define ARR_SIZE 10                     //Количество элементов массива. 
@@ -167,6 +168,15 @@ void setup()
                             4       5       6
                             7       8       9
                             10      11      12*/
+    }
+    {//Конструктор переноса и operator=
+      CyclicArray<int> tmpArr{1, 2, 3};
+      CyclicArray<int> tmpArr2{1, 2, 3};
+      CyclicArray<int> moveArr = std::move(tmpArr); // Вызов конструктора переноса. tmpArr переносится в moveArr. tmpArr теперь содержит nullptr
+      moveArr = std::move(tmpArr2); // Вызов operator=
+      auto func = [](){CyclicArray<int> temp{9,8,7}; return temp;};
+      CyclicArray<int> newArr = func();// сразу создаться newArr2 в функции без явных вызовов доп. конструкторов (оптимизация)
+      newArr = func(); // Вызов operator=
     }
 
 delay(1000000);
