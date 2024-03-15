@@ -84,8 +84,8 @@ void setup()
     Serial.printf("%d ", e);                      //15 16 17 18 19 10 11 12 13 14
   Serial.println();
 
-  auto ShowArr = [](int val){Serial.printf("%d ", val);};
-  std::for_each(arr.begin(), arr.end(), ShowArr); //15 16 17 18 19 10 11 12 13 14
+  auto showArr = [](int val){Serial.printf("%d ", val);};
+  std::for_each(std::begin(arr), std::end(arr), showArr); //15 16 17 18 19 10 11 12 13 14
 
   auto predicate_IsEven = [](int val){return val % 2 == 0;};
   size_t evenNumbersCount = std::count_if(arr.begin(), arr.end(), predicate_IsEven);
@@ -104,7 +104,7 @@ void setup()
   element = arr.setCircleIdx(0); // element = 10
   print (arr);              //10 11 12 5000 14 15 16 17 18 19
 
-  for(int i = 0; i<ARR_SIZE * 4; i++ ){ //Круговое заполнение массива 4 раза с перезаписью прежних данных. После записи последнего элемента начинаем запись с начала массива.
+  for(int i = 0; i < ARR_SIZE * 4; i++ ){ //Круговое заполнение массива 4 раза с перезаписью прежних данных. После записи последнего элемента начинаем запись с начала массива.
      arr++ = i;
   // ++arr //39 30 31 32 33 34 35 36 37 38 начинает запись в первый индекс 1->2->3...n->0->1->...
   // arr++ //30 31 32 33 34 35 36 37 38 39 начинает запись в нулевой индекс 0->1->2...n->0->...
@@ -169,14 +169,20 @@ void setup()
                             7       8       9
                             10      11      12*/
     }
-    {//Конструктор переноса и operator=
+    {//Конструктор переноса и operator= по переносу
       CyclicArray<int> tmpArr{1, 2, 3};
       CyclicArray<int> tmpArr2{1, 2, 3};
       CyclicArray<int> moveArr = std::move(tmpArr); // Вызов конструктора переноса. tmpArr переносится в moveArr. tmpArr теперь содержит nullptr
-      moveArr = std::move(tmpArr2); // Вызов operator=
+      moveArr = std::move(tmpArr2); // Вызов operator= по переносу
       auto func = [](){CyclicArray<int> temp{9,8,7}; return temp;};
-      CyclicArray<int> newArr = func();// сразу создаться newArr2 в функции без явных вызовов доп. конструкторов (оптимизация)
-      newArr = func(); // Вызов operator=
+      CyclicArray<int> newArr = func();// сразу создаться newArr2 в функции без явных вызовов доп. конструкторов (оптимизация скорее всего inline)
+      newArr = func(); // Вызов operator= по переносу, затем деструктор для временного объекта в котором после переноса nullptr.
+    }
+
+    {//Константная ссылка на CyclicArray
+      const CyclicArray<int>& constArr = arr; //тип можно писать и так const auto&
+      Serial.printf("\n%d",constArr[0]);
+     // constArr[0] = 5; // Ошибка на этапе компиляции
     }
 
 delay(1000000);

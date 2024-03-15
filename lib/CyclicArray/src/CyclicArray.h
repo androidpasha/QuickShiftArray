@@ -48,15 +48,17 @@ class CyclicArray
 	size_t circleIdx{ 0 };		//индекс для обращения к массиву через операторы ++ и --
 public:
 	class Iterator;
-	CyclicArray();//конструктор по умолчанию
+	CyclicArray();									//конструктор по умолчанию
 	CyclicArray(size_t size);						//конструктор. создает на куче массив
 	CyclicArray(std::initializer_list<T> initList);	//конструктор инициализации списком
 	CyclicArray(const CyclicArray& other);			//конструктор копирования для передачи по значению
 	CyclicArray(CyclicArray&& other) noexcept;
-	CyclicArray& operator=(const CyclicArray& other);
+	CyclicArray& operator=(CyclicArray&& other);// перегрузка присваивания по перемещению
+	CyclicArray& operator=(const CyclicArray& other);// перегрузка оператора присваивания
 	CyclicArray(const char* str);					//инициализация с строкой
 	//T* operator->() { return (*this); }
 	T& operator [] (size_t index);					//возвращает указатель на элементу массива с номером index
+	const T& operator [] (size_t index) const;					//возвращает указатель на элементу массива с номером index	
 	void operator >> (size_t shift);				//сдвигает массив вправо (меняется индекс отсчета)
 	void operator << (size_t shift);				//сдвигает массив влево
 	T& operator ++ (int);							//постфиксный инкремент. Возвращает элемент с номером circleIdx++.
@@ -65,8 +67,8 @@ public:
 	T& operator -- ();								//префиксный декремент. Возвращает элемент с номером --circleIdx.
 	size_t getCircleIdx()const { return circleIdx; } 		//возвращает положение кругового индекса для чтения/записи операторами ++ и --
 	T& setCircleIdx(size_t idx) { circleIdx = idx; return (*this)[circleIdx]; }//устанавливает круговой индекс для чтения/записи операторами ++ и -- а также возвращает значение установленной позиции
-	void setOffset(size_t offset) { offsetPtr = beginPtr + offset; } //Сдвигает массив влево начиная с нулевого элемента без учета прежних сдвигов
-	size_t getOffset() const { return offsetPtr - beginPtr; }            //Возвращает сдвиг
+	void setOffset(size_t offset) { offsetPtr = beginPtr + offset; }	//Сдвигает массив влево начиная с нулевого элемента без учета прежних сдвигов
+	size_t getOffset() const { return offsetPtr - beginPtr; }			//Возвращает сдвиг
 	void push_back(const T&);				//сдвигает массив влево на одну позицию и добавляет в последнюю элемент новые данные
 	void push_front(const T&);				//сдвигает массив вправо на одну позицию и добавляет в начальную элемент новые данные
 	size_t size() const { return _size; };						//возвращает количество элементов массива
@@ -109,33 +111,31 @@ CyclicArray<T, Size>::CyclicArray(const CyclicArray& other)
 	offsetPtr = beginPtr + (other.offsetPtr - other.beginPtr);
 	endPtr = beginPtr + _size;
 }
-
+//конструктор переноса используется при создании новых объектов,
+//оператор присваивания по перемещению - при присваивании уже существующих объектов.
 template<typename T, size_t Size>
 CyclicArray<T, Size>::CyclicArray(CyclicArray&& other) noexcept { // Конструктор переноса
 	 if (this != &other) {
-        delete[] beginPtr;
+        //delete[] beginPtr; // т.к. конструктор переноса вызывается для новых объектов то и удалять нечего
         _size = std::exchange(other._size, 0); // Перемещение _size и сброс в 0
         circleIdx = std::exchange(other.circleIdx, 0); // Перемещение circleIdx и сброс в 0
         beginPtr = std::exchange(other.beginPtr, nullptr); // Перемещение beginPtr и сброс в nullptr
         offsetPtr = std::exchange(other.offsetPtr, nullptr);
         endPtr = std::exchange(other.endPtr, nullptr);
     }
-	
-	}
+}
 
 template<typename T, size_t Size>
-void CyclicArray<T, Size>::setSize(size_t newSize) {
-		T* tmp = new T[newSize];
-		if (newSize < _size)	
-        	std::copy(beginPtr, beginPtr + newSize, tmp);
-		else
-			std::copy(beginPtr, endPtr, tmp);
+CyclicArray<T, Size>& CyclicArray<T, Size>::operator=(CyclicArray&& other) {
+	if (this != &other) {
 		delete[] beginPtr;
-		beginPtr = tmp;
-		offsetPtr = beginPtr;
-		endPtr = beginPtr + newSize;
-		_size = newSize;
-		circleIdx = 0;
+        _size = std::exchange(other._size, 0); // Перемещение _size и сброс в 0
+        circleIdx = std::exchange(other.circleIdx, 0); // Перемещение circleIdx и сброс в 0
+        beginPtr = std::exchange(other.beginPtr, nullptr); // Перемещение beginPtr и сброс в nullptr
+        offsetPtr = std::exchange(other.offsetPtr, nullptr);
+        endPtr = std::exchange(other.endPtr, nullptr);
+	}
+	return *this;
 }
 
 template<typename T, size_t Size>
@@ -158,6 +158,11 @@ T& CyclicArray<T, Size>::operator[](size_t index) {
 		return offsetPtr[index];
 	else
 		return offsetPtr[index - _size];
+}
+
+template<typename T, size_t Size>
+const T& CyclicArray<T, Size>::operator[](size_t index) const {
+	return const_cast<CyclicArray*>(this)->operator[](index);
 }
 
 template<typename T, size_t Size>
@@ -221,6 +226,21 @@ CyclicArray<T, Size>::CyclicArray(const char* str) {
 	offsetPtr = beginPtr;
 	endPtr = beginPtr + _size;
 	strcpy(beginPtr, str);
+}
+
+template<typename T, size_t Size>
+void CyclicArray<T, Size>::setSize(size_t newSize) {
+		T* tmp = new T[newSize];
+		if (newSize < _size)	
+        	std::copy(beginPtr, beginPtr + newSize, tmp);
+		else
+			std::copy(beginPtr, endPtr, tmp);
+		delete[] beginPtr;
+		beginPtr = tmp;
+		offsetPtr = beginPtr;
+		endPtr = beginPtr + newSize;
+		_size = newSize;
+		circleIdx = 0;
 }
 
 template<typename T, size_t Size>
