@@ -31,7 +31,9 @@ void setup()
   CyclicArray<int>sortArr{-1,1,-3,3,-2,2,-5,5,-4,4};
   std::sort(sortArr.begin(), sortArr.end(), std::greater<int>());  
   print(sortArr);       
-
+  std::sort(sortArr.begin(), sortArr.end());  
+  print(sortArr); 
+  
   auto ShowStr = [](auto str){Serial.printf("%s, %s %s\n",str[0], str[1], str[2]);};
   CyclicArray<const char*> str{"казнить", "нельзя", "помиловать"}; //инициализация списком
   ShowStr(str);                     //казнить, нельзя помиловать

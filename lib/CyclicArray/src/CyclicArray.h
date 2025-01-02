@@ -257,7 +257,7 @@ public:
 	Iterator& operator --	() { --offsetPtr; return *this; }
 	Iterator	operator +	(int n) const { return Iterator(beginPtr, offsetPtr + n, endPtr); }
 	Iterator	operator -	(int n) const { return Iterator(beginPtr, offsetPtr - n + 1, endPtr); }
-	int			operator -	(const Iterator& other) const { return offsetPtr - other.offsetPtr + size + 1; }
+	int			operator -	(const Iterator& other) const { return offsetPtr - other.offsetPtr; }
 	Iterator& operator +=	(size_t n) { offsetPtr += n; return *this; }
 	Iterator& operator -=	(size_t n) { offsetPtr -= n; return *this; }
 	bool		operator !=	(const Iterator& other) const { return (offsetPtr != other.offsetEndPtr) and (offsetPtr + size + 1 != other.offsetEndPtr); } // and (offsetPtr != other.beginPtr - 1) and (other.offsetPtr != beginPtr - 1);}
